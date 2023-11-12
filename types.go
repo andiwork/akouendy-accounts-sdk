@@ -5,7 +5,7 @@ import (
 	http_mw "github.com/zitadel/zitadel-go/v2/pkg/api/middleware/http"
 )
 
-type ZitadelClient struct {
+type AccountClient struct {
 	*req.Client
 	*http_mw.IntrospectionInterceptor
 	*ZitadelUser

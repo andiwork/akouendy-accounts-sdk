@@ -23,7 +23,7 @@ var (
 	userOnceCache     sync.Once
 )
 
-func NewZitadelClient(baseUrl string, keyPath string, user *ZitadelUser, userId *string) *ZitadelClient {
+func NewAccountClient(baseUrl string, keyPath string, user *ZitadelUser, userId *string) *AccountClient {
 	once.Do(func() {
 		var err error
 		introspection, err = http_mw.NewIntrospectionInterceptor(baseUrl, keyPath)
@@ -32,7 +32,7 @@ func NewZitadelClient(baseUrl string, keyPath string, user *ZitadelUser, userId 
 		}
 	})
 
-	return &ZitadelClient{
+	return &AccountClient{
 		IntrospectionInterceptor: introspection,
 		ZitadelUser:              user,
 		UserId:                   userId,
@@ -57,15 +57,22 @@ func NewZitadelClient(baseUrl string, keyPath string, user *ZitadelUser, userId 
 			}),
 	}
 }
-
-func (client *ZitadelClient) ZitadelAuth(next http.Handler) http.Handler {
+func (client *AccountClient) UrlParameterToken(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Has("atkn") {
+			r.Header.Add("Authorization", fmt.Sprintf("Bearer %s", r.URL.Query().Get("atkn")))
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+func (client *AccountClient) ZitadelAuth(next http.Handler) http.Handler {
 	return client.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		token := r.Header.Get("Authorization")
 		cacheKey := md5hash((token))
 		store, ok := getCache().Get(cacheKey)
 		if ok {
 			log.Println("==== get user from cache")
-			client = store.(*ZitadelClient)
+			client = store.(*AccountClient)
 		} else {
 			log.Println("==== get user from auth server")
 			resp, _ := client.R().
